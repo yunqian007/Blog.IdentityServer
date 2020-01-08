@@ -27,7 +27,11 @@ namespace Blog.IdentityServer4.ConfigCenter
                 new ApiResource("blog.core.api", "Blog.Core API") {
                     // include the following using claims in access token (in addition to subject id)
                     //requires using using IdentityModel;
-                    UserClaims = { JwtClaimTypes.Name, JwtClaimTypes.Role }
+                    UserClaims = { JwtClaimTypes.Name, JwtClaimTypes.Role },
+                     ApiSecrets = new List<Secret>()
+                    {
+                        new Secret("api_secret".Sha256())
+                    },
                 }
             };
         }
@@ -43,9 +47,26 @@ namespace Blog.IdentityServer4.ConfigCenter
                     AllowedGrantTypes = GrantTypes.Implicit,
                     AllowAccessTokensViaBrowser = true,
 
-                    RedirectUris =           { "http://localhost:6688/callback" },
-                    PostLogoutRedirectUris = { "http://localhost:6688" },
-                    AllowedCorsOrigins =     { "http://localhost:6688" },
+                    RedirectUris =           { "http://vueblog.neters.club/callback" },
+                    PostLogoutRedirectUris = { "http://vueblog.neters.club" },
+                    AllowedCorsOrigins =     { "http://vueblog.neters.club" },
+
+                    AllowedScopes = {
+                        IdentityServerConstants.StandardScopes.OpenId,
+                        IdentityServerConstants.StandardScopes.Profile,
+                        "roles",
+                        "blog.core.api"
+                    }
+                },
+                new Client {
+                    ClientId = "blogadminjs",
+                    ClientName = "Blog.Admin JavaScript Client",
+                    AllowedGrantTypes = GrantTypes.Implicit,
+                    AllowAccessTokensViaBrowser = true,
+
+                    RedirectUris =           { "http://vueadmin.neters.club/callback" },
+                    PostLogoutRedirectUris = { "http://vueadmin.neters.club" },
+                    AllowedCorsOrigins =     { "http://vueadmin.neters.club" },
 
                     AllowedScopes = {
                         IdentityServerConstants.StandardScopes.OpenId,

@@ -66,7 +66,6 @@ namespace Blog.IdentityServer4.Data
                                     Birthday = user.Brithday,
                                     Address = user.Address,
                                     IsDelete = user.IsDeleted
-
                                 };
 
                                 //var result = userMgr.CreateAsync(userItem, "BlogIdp123$" + item.uLoginPWD).Result;
@@ -83,10 +82,11 @@ namespace Blog.IdentityServer4.Data
                                     throw new Exception(result.Errors.First().Description);
                                 }
 
-                                var claims = new List<Claim>{
-                            new Claim(JwtClaimTypes.Name, user.UserName),
-                            new Claim(JwtClaimTypes.Email, $"{user.LoginName}@email.com"),
-                        };
+                                var claims = new List<Claim>
+                                {
+                                    new Claim(JwtClaimTypes.Name, user.UserName),
+                                    new Claim(JwtClaimTypes.Email, $"{user.LoginName}@email.com"),
+                                 };
 
                                 claims.AddRange(rName.Select(s => new Claim(JwtClaimTypes.Role, s.ToString())));
 

@@ -74,7 +74,9 @@ namespace Blog.IdentityServer4.Model.Bak
         /// </summary>
         public string UserName { get; set; }
 
-
+        /// <summary>
+        /// 角色名称
+        /// </summary>
         public string RoleName { get; set; }
 
         // 性别
