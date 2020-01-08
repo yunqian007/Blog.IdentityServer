@@ -20,10 +20,6 @@ namespace Blog.IdentityServer4.Data
     {
         public static void EnsureSeedData(IServiceProvider serviceProvider)
         {
-            //1.dotnet ef migrations add InitialIdentityServerPersistedGrantDbMigration -c PersistedGrantDbContext -o Data/Migrations/IdentityServer/PersistedGrantDb
-            //2.dotnet ef migrations add InitialIdentityServerConfigurationDbMigration -c ConfigurationDbContext -o Data/Migrations/IdentityServer/ConfigurationDb
-            //3.dotnet ef migrations add AppDbMigration -c ApplicationDbContext -o Data
-            //4.dotnet run /seed
             Console.WriteLine("Seeding database...");
 
             using (var scope = serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope())
@@ -47,57 +43,56 @@ namespace Blog.IdentityServer4.Data
                     var BlogCore_Roles = JsonHelper.ParseFormByJson<List<RoleModel>>(GetTableData.GetData(nameof(RoleModel)));
                     var BlogCore_UserRoles = JsonHelper.ParseFormByJson<List<UserRoleModel>>(GetTableData.GetData(nameof(UserRoleModel)));
 
-                    // 迁移【用户】信息
-                    foreach (var item in BlogCore_Users)
+                    foreach (var user in BlogCore_Users)
                     {
-                        if (item == null || item.LoginName == null)
+                        if (user == null || user.LoginName == null)
                         {
                             continue;
                         }
-                        var userItem = userMgr.FindByNameAsync(item.LoginName).Result;
-                        var userRoles = BlogCore_UserRoles.Where(d => d.UserId == item.Id).ToList();
-                        //var rName = BlogCore_Roles.FirstOrDefault(d => d.Id == rid)?.Name;
+                        var userItem = userMgr.FindByNameAsync(user.LoginName).Result;
+                        var rid = BlogCore_UserRoles.FirstOrDefault(d => d.UserId == user.Id)?.RoleId;
+                        var rName = BlogCore_Roles.Where(d => d.Id == rid).Select(d => d.Id).ToList();
 
                         if (userItem == null)
                         {
-                            if (userRoles.Count > 0)
+                            if (rid > 0 && rName.Count > 0)
                             {
-                                var applicationUserRole = new List<ApplicationUserRole>();
-                                foreach (var userRoleItemS in userRoles)
-                                {
-                                    applicationUserRole.Add(new ApplicationUserRole()
-                                    {
-
-                                    });
-                                }
-
                                 userItem = new ApplicationUser
                                 {
-                                    UserName = item.UserName,
-                                    LoginName = item.LoginName,
-                                    Sex = item.Sex,
-                                    Age = item.Age,
-                                    Birthday=item.Brithday,
-                                    Address = item.Address,
-                                    IsDelete = item.IsDeleted,
-                                    RealName = item.UserName,
+                                    UserName = user.UserName,
+                                    LoginName = user.LoginName,
+                                    Sex = user.Sex,
+                                    Age = user.Age,
+                                    Birthday = user.Brithday,
+                                    Address = user.Address,
+                                    IsDelete = user.IsDeleted
+
                                 };
 
                                 //var result = userMgr.CreateAsync(userItem, "BlogIdp123$" + item.uLoginPWD).Result;
 
                                 // 因为导入的密码是 MD5密文，所以这里统一都用初始密码了
-                                var result = userMgr.CreateAsync(userItem, "BlogIdp123$InitPwd").Result;
+                                var pwdInit = "BlogIdp123$InitPwd";
+                                //if (userItem.UserName== "blogadmin")
+                                //{
+                                //    pwdInit = "#InitPwd";
+                                //}
+                                var result = userMgr.CreateAsync(userItem, pwdInit).Result;
                                 if (!result.Succeeded)
                                 {
                                     throw new Exception(result.Errors.First().Description);
                                 }
 
+                                var claims = new List<Claim>{
+                            new Claim(JwtClaimTypes.Name, user.UserName),
+                            new Claim(JwtClaimTypes.Email, $"{user.LoginName}@email.com"),
+                        };
 
-                                result = userMgr.AddClaimsAsync(userItem, new Claim[]{
-                                    new Claim(JwtClaimTypes.Name, item.UserName),
-                                    new Claim(JwtClaimTypes.Email, $"{item.LoginName}@email.com"),
-                                    new Claim(JwtClaimTypes.Role, item.RoleName)
-                                }).Result;
+                                claims.AddRange(rName.Select(s => new Claim(JwtClaimTypes.Role, s.ToString())));
+
+
+                                result = userMgr.AddClaimsAsync(userItem, claims).Result;
+
 
                                 if (!result.Succeeded)
                                 {
@@ -108,7 +103,7 @@ namespace Blog.IdentityServer4.Data
                             }
                             else
                             {
-                                Console.WriteLine($"{item?.LoginName} doesn't have a corresponding role.");
+                                Console.WriteLine($"{user?.LoginName} doesn't have a corresponding role.");
                             }
                         }
                         else
