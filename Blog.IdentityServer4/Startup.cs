@@ -1,10 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
+using Blog.IdentityServer4.Data;
+using Blog.IdentityServer4.Model;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,7 +30,49 @@ namespace Blog.IdentityServer4
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
+            var connectionString = Configuration.GetConnectionString("DefaultConnection");
+            if (connectionString == "")
+            {
+                throw new Exception(" ˝æ›ø‚≈‰÷√“Ï≥£");
+            }
+            var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
+
+            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+
+            services.AddIdentity<ApplicationUser, ApplicationRole>()
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
+
             services.AddMvc();
+
+            //services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
+            #region ≤‚ ‘IdentityServer4
+            //var builder = services.AddIdentityServer(options =>
+            //    {
+            //        options.Events.RaiseErrorEvents = true;
+            //        options.Events.RaiseInformationEvents = true;
+            //        options.Events.RaiseFailureEvents = true;
+            //        options.Events.RaiseSuccessEvents = true;
+            //    })
+            //    // in-memory, code config
+            //    .AddTestUsers(InMemoryConfig.Users().ToList())
+            //    .AddInMemoryApiResources(InMemoryConfig.GetApiResources())
+            //    .AddInMemoryClients(InMemoryConfig.GetClients());
+
+
+            //builder.AddDeveloperSigningCredential(); 
+
+            //if (Environment.IsDevelopment())
+            //{
+            //    builder.AddDeveloperSigningCredential();
+            //}
+            //else
+            //{
+            //    throw new Exception("need to configure key material");
+            //}
+            #endregion
+
 
             var builder = services.AddIdentityServer(options =>
             {
@@ -34,13 +81,28 @@ namespace Blog.IdentityServer4
                 options.Events.RaiseFailureEvents = true;
                 options.Events.RaiseSuccessEvents = true;
             })
-            // in-memory, code config
-            .AddTestUsers(InMemoryConfig.Users().ToList())
-            .AddInMemoryApiResources(InMemoryConfig.GetApiResources())
-            .AddInMemoryClients(InMemoryConfig.GetClients());
 
+                // in-Sqlite
+                .AddAspNetIdentity<ApplicationUser>()
+                // this adds the config data from DB (clients, resources)
+                .AddConfigurationStore(options =>
+                {
+                    options.ConfigureDbContext = b =>
+                        b.UseSqlServer(connectionString,
+                            sql => sql.MigrationsAssembly(migrationsAssembly));
+                })
+                // this adds the operational data from DB (codes, tokens, consents)
+                .AddOperationalStore(options =>
+                {
+                    options.ConfigureDbContext = b =>
+                        b.UseSqlServer(connectionString,
+                            sql => sql.MigrationsAssembly(migrationsAssembly));
 
-            builder.AddDeveloperSigningCredential();
+                    // this enables automatic token cleanup. this is optional.
+                    options.EnableTokenCleanup = true;
+                    // frequency in seconds to cleanup stale grants. 15 is useful during debugging
+                    options.TokenCleanupInterval = 30; 
+                });
 
             if (Environment.IsDevelopment())
             {
