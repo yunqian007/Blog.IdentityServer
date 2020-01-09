@@ -104,6 +104,7 @@ namespace Blog.IdentityServer4
                     options.TokenCleanupInterval = 30; 
                 });
 
+            builder.AddDeveloperSigningCredential();
             if (Environment.IsDevelopment())
             {
                 builder.AddDeveloperSigningCredential();
@@ -123,11 +124,17 @@ namespace Blog.IdentityServer4
             {
                 app.UseDeveloperExceptionPage();
             }
+            else
+            {
+                app.UseExceptionHandler("/Home/Error");
+            }
+
             app.UseStaticFiles();
-
             app.UseRouting();
-
             app.UseIdentityServer();
+
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
