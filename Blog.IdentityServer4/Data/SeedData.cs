@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 
 namespace Blog.IdentityServer4.Data
 {
+    #region MyRegion
     public class SeedData
     {
         public static void EnsureSeedData(IServiceProvider serviceProvider)
@@ -59,8 +60,8 @@ namespace Blog.IdentityServer4.Data
                             {
                                 userItem = new ApplicationUser
                                 {
-                                    UserName = user.UserName,
-                                    LoginName = user.LoginName,
+                                    UserName = user.LoginName,
+                                    LoginName = user.UserName,
                                     Sex = user.Sex,
                                     Age = user.Age,
                                     Birthday = user.Brithday,
@@ -99,7 +100,6 @@ namespace Blog.IdentityServer4.Data
                                     throw new Exception(result.Errors.First().Description);
                                 }
                                 Console.WriteLine($"{userItem?.UserName} created");//AspNetUserClaims 表
-
                             }
                             else
                             {
@@ -151,9 +151,7 @@ namespace Blog.IdentityServer4.Data
                         {
                             Console.WriteLine($"{roleModel?.Name} already exists");
                         }
-
                     }
-
                 }
             }
 
@@ -206,4 +204,5 @@ namespace Blog.IdentityServer4.Data
             }
         }
     }
+    #endregion
 }
