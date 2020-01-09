@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
+using Blog.IdentityServer4.Model;
 using IdentityModel;
 using IdentityServer4.Events;
 using IdentityServer4.Extensions;
@@ -12,6 +13,7 @@ using IdentityServer4.Test;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Linq;
@@ -28,22 +30,29 @@ namespace IdentityServer4.Quickstart.UI
     [AllowAnonymous]
     public class AccountController : Controller
     {
-        private readonly TestUserStore _users;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<ApplicationRole> _roleManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IIdentityServerInteractionService _interaction;
         private readonly IClientStore _clientStore;
         private readonly IAuthenticationSchemeProvider _schemeProvider;
         private readonly IEventService _events;
 
         public AccountController(
+            UserManager<ApplicationUser> userManager,
+            RoleManager<ApplicationRole> roleManager,
+            SignInManager<ApplicationUser> signInManager,
             IIdentityServerInteractionService interaction,
             IClientStore clientStore,
             IAuthenticationSchemeProvider schemeProvider,
-            IEventService events,
-            TestUserStore users = null)
+            IEventService events)
         {
             // if the TestUserStore is not in DI, then we'll just use the global users collection
             // this is where you would plug in your own custom identity management library (e.g. ASP.NET Identity)
-            _users = users ?? new TestUserStore(TestUsers.Users);
+            //_users = users ?? new TestUserStore(TestUsers.Users);
+            _userManager = userManager;
+            _roleManager = roleManager;
+            _signInManager = signInManager;
 
             _interaction = interaction;
             _clientStore = clientStore;
@@ -51,6 +60,7 @@ namespace IdentityServer4.Quickstart.UI
             _events = events;
         }
 
+        #region 01，Identity Server 4 登陆页+async Task<IActionResult> Login(string returnUrl)
         /// <summary>
         /// Entry point into the login workflow
         /// </summary>
@@ -68,7 +78,9 @@ namespace IdentityServer4.Quickstart.UI
 
             return View(vm);
         }
+        #endregion
 
+        #region 02，Identity Server 4 使用用户名/密码登陆操作+async Task<IActionResult> Login(LoginInputModel model, string button)
         /// <summary>
         /// Handle postback from username/password login
         /// </summary>
@@ -108,62 +120,86 @@ namespace IdentityServer4.Quickstart.UI
 
             if (ModelState.IsValid)
             {
-                // validate username/password against in-memory store
-                if (_users.ValidateCredentials(model.Username, model.Password))
+                var user = await _userManager.FindByNameAsync(model.Username);
+
+
+                if (!user.IsDelete)
                 {
-                    var user = _users.FindByUsername(model.Username);
-                    await _events.RaiseAsync(new UserLoginSuccessEvent(user.Username, user.SubjectId, user.Username, clientId: context?.ClientId));
-
-                    // only set explicit expiration here if user chooses "remember me". 
-                    // otherwise we rely upon expiration configured in cookie middleware.
-                    AuthenticationProperties props = null;
-                    if (AccountOptions.AllowRememberLogin && model.RememberLogin)
+                    var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, model.RememberLogin, lockoutOnFailure: true);
+                    if (result.Succeeded)
                     {
-                        props = new AuthenticationProperties
+                        await _events.RaiseAsync(new UserLoginSuccessEvent(user.UserName, user.Id.ToString(), user.UserName));
+
+                        // make sure the returnUrl is still valid, and if so redirect back to authorize endpoint or a local page
+                        // the IsLocalUrl check is only necessary if you want to support additional local pages, otherwise IsValidReturnUrl is more strict
+                        if (_interaction.IsValidReturnUrl(model.ReturnUrl) || Url.IsLocalUrl(model.ReturnUrl))
                         {
-                            IsPersistent = true,
-                            ExpiresUtc = DateTimeOffset.UtcNow.Add(AccountOptions.RememberMeLoginDuration)
-                        };
-                    };
-
-                    // issue authentication cookie with subject ID and username
-                    var isuser = new IdentityServerUser(user.SubjectId)
-                    {
-                        DisplayName = user.Username
-                    };
-
-                    await HttpContext.SignInAsync(isuser, props);
-
-                    if (context != null)
-                    {
-                        if (await _clientStore.IsPkceClientAsync(context.ClientId))
-                        {
-                            // if the client is PKCE then we assume it's native, so this change in how to
-                            // return the response is for better UX for the end user.
-                            return this.LoadingPage("Redirect", model.ReturnUrl);
+                            return Redirect(model.ReturnUrl);
                         }
 
-                        // we can trust model.ReturnUrl since GetAuthorizationContextAsync returned non-null
-                        return Redirect(model.ReturnUrl);
-                    }
-
-                    // request for a local page
-                    if (Url.IsLocalUrl(model.ReturnUrl))
-                    {
-                        return Redirect(model.ReturnUrl);
-                    }
-                    else if (string.IsNullOrEmpty(model.ReturnUrl))
-                    {
                         return Redirect("~/");
-                    }
-                    else
-                    {
-                        // user might have clicked on a malicious link - should be logged
-                        throw new Exception("invalid return URL");
                     }
                 }
 
-                await _events.RaiseAsync(new UserLoginFailureEvent(model.Username, "invalid credentials", clientId:context?.ClientId));
+
+                //验证内存中的数据 validate username/password against in-memory store
+                #region 验证内存中的数据
+                //if (_users.ValidateCredentials(model.Username, model.Password))
+                //{
+                //    var user = _users.FindByUsername(model.Username);
+                //    await _events.RaiseAsync(new UserLoginSuccessEvent(user.Username, user.SubjectId, user.Username, clientId: context?.ClientId));
+
+                //    // only set explicit expiration here if user chooses "remember me". 
+                //    // otherwise we rely upon expiration configured in cookie middleware.
+                //    AuthenticationProperties props = null;
+                //    if (AccountOptions.AllowRememberLogin && model.RememberLogin)
+                //    {
+                //        props = new AuthenticationProperties
+                //        {
+                //            IsPersistent = true,
+                //            ExpiresUtc = DateTimeOffset.UtcNow.Add(AccountOptions.RememberMeLoginDuration)
+                //        };
+                //    };
+
+                //    // issue authentication cookie with subject ID and username
+                //    var isuser = new IdentityServerUser(user.SubjectId)
+                //    {
+                //        DisplayName = user.Username
+                //    };
+
+                //    await HttpContext.SignInAsync(isuser, props);
+
+                //    if (context != null)
+                //    {
+                //        if (await _clientStore.IsPkceClientAsync(context.ClientId))
+                //        {
+                //            // if the client is PKCE then we assume it's native, so this change in how to
+                //            // return the response is for better UX for the end user.
+                //            return this.LoadingPage("Redirect", model.ReturnUrl);
+                //        }
+
+                //        // we can trust model.ReturnUrl since GetAuthorizationContextAsync returned non-null
+                //        return Redirect(model.ReturnUrl);
+                //    }
+
+                //    // request for a local page
+                //    if (Url.IsLocalUrl(model.ReturnUrl))
+                //    {
+                //        return Redirect(model.ReturnUrl);
+                //    }
+                //    else if (string.IsNullOrEmpty(model.ReturnUrl))
+                //    {
+                //        return Redirect("~/");
+                //    }
+                //    else
+                //    {
+                //        // user might have clicked on a malicious link - should be logged
+                //        throw new Exception("invalid return URL");
+                //    }
+                //} /**/
+                #endregion
+
+                await _events.RaiseAsync(new UserLoginFailureEvent(model.Username, "invalid credentials", clientId: context?.ClientId));
                 ModelState.AddModelError(string.Empty, AccountOptions.InvalidCredentialsErrorMessage);
             }
 
@@ -171,8 +207,10 @@ namespace IdentityServer4.Quickstart.UI
             var vm = await BuildLoginViewModelAsync(model);
             return View(vm);
         }
+        #endregion
 
-        
+
+        #region 03，退出页面+async Task<IActionResult> Logout(string logoutId)
         /// <summary>
         /// Show logout page
         /// </summary>
@@ -191,7 +229,9 @@ namespace IdentityServer4.Quickstart.UI
 
             return View(vm);
         }
+        #endregion
 
+        #region 04，退出按钮操作+async Task<IActionResult> Logout(LogoutInputModel model)
         /// <summary>
         /// Handle logout page postback
         /// </summary>
@@ -205,7 +245,10 @@ namespace IdentityServer4.Quickstart.UI
             if (User?.Identity.IsAuthenticated == true)
             {
                 // delete local authentication cookie
-                await HttpContext.SignOutAsync();
+                //await HttpContext.SignOutAsync();
+
+
+                await _signInManager.SignOutAsync();
 
                 // raise the logout event
                 await _events.RaiseAsync(new UserLogoutSuccessEvent(User.GetSubjectId(), User.GetDisplayName()));
@@ -224,12 +267,22 @@ namespace IdentityServer4.Quickstart.UI
             }
 
             return View("LoggedOut", vm);
-        }
+        } 
+        #endregion
 
         [HttpGet]
         public IActionResult AccessDenied()
         {
             return View();
+        }
+
+
+        private void AddErrors(IdentityResult result)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
         }
 
 
