@@ -27,7 +27,7 @@ namespace IdentityServer4.Quickstart.UI
     /// The interaction service provides a way for the UI to communicate with identityserver for validation and context retrieval
     /// </summary>
     [SecurityHeaders]
-    [AllowAnonymous]
+    //[AllowAnonymous]
     public class AccountController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -60,7 +60,7 @@ namespace IdentityServer4.Quickstart.UI
             _events = events;
         }
 
-        #region 01£¬Identity Server 4 µÇÂ½Ò³+async Task<IActionResult> Login(string returnUrl)
+        #region 01ï¼ŒIdentity Server 4 ç™»é™†é¡µé¢+async Task<IActionResult> Login(string returnUrl)
         /// <summary>
         /// Entry point into the login workflow
         /// </summary>
@@ -80,7 +80,7 @@ namespace IdentityServer4.Quickstart.UI
         }
         #endregion
 
-        #region 02£¬Identity Server 4 Ê¹ÓÃÓÃ»§Ãû/ÃÜÂëµÇÂ½²Ù×÷+async Task<IActionResult> Login(LoginInputModel model, string button)
+        #region 02ï¼ŒIdentity Server 4 ç”¨æˆ·ç™»é™†æ“ä½œ+async Task<IActionResult> Login(LoginInputModel model, string button)
         /// <summary>
         /// Handle postback from username/password login
         /// </summary>
@@ -123,7 +123,7 @@ namespace IdentityServer4.Quickstart.UI
                 var user = await _userManager.FindByNameAsync(model.Username);
 
 
-                if (!user.IsDelete)
+                if (user!=null&&!user.IsDelete)
                 {
                     var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, model.RememberLogin, lockoutOnFailure: true);
                     if (result.Succeeded)
@@ -142,8 +142,8 @@ namespace IdentityServer4.Quickstart.UI
                 }
 
 
-                //ÑéÖ¤ÄÚ´æÖĞµÄÊı¾İ validate username/password against in-memory store
-                #region ÑéÖ¤ÄÚ´æÖĞµÄÊı¾İ
+                //validate username/password against in-memory store
+                #region validate username/password against in-memory store
                 //if (_users.ValidateCredentials(model.Username, model.Password))
                 //{
                 //    var user = _users.FindByUsername(model.Username);
@@ -210,7 +210,7 @@ namespace IdentityServer4.Quickstart.UI
         #endregion
 
 
-        #region 03£¬ÍË³öÒ³Ãæ+async Task<IActionResult> Logout(string logoutId)
+        #region 03ï¼Œé€€å‡ºé¡µé¢+async Task<IActionResult> Logout(string logoutId)
         /// <summary>
         /// Show logout page
         /// </summary>
@@ -231,7 +231,7 @@ namespace IdentityServer4.Quickstart.UI
         }
         #endregion
 
-        #region 04£¬ÍË³ö°´Å¥²Ù×÷+async Task<IActionResult> Logout(LogoutInputModel model)
+        #region 04ï¼Œç‚¹å‡»é€€å‡ºæ“ä½œ+async Task<IActionResult> Logout(LogoutInputModel model)
         /// <summary>
         /// Handle logout page postback
         /// </summary>
@@ -267,8 +267,20 @@ namespace IdentityServer4.Quickstart.UI
             }
 
             return View("LoggedOut", vm);
-        } 
+        }
         #endregion
+
+
+        [HttpGet]
+        [Route("Account/Users")]
+        [Authorize]
+        public IActionResult Users(string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            var users = _userManager.Users.Where(d => !d.IsDelete).OrderBy(d => d.UserName).ToList();
+
+            return View(users);
+        }
 
         [HttpGet]
         public IActionResult AccessDenied()
