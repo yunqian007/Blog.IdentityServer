@@ -3,6 +3,7 @@
 
 
 using Blog.IdentityServer4.Model;
+using Blog.IdentityServer4.Quickstart.Account;
 using IdentityModel;
 using IdentityServer4.Events;
 using IdentityServer4.Extensions;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace IdentityServer4.Quickstart.UI
@@ -209,8 +211,7 @@ namespace IdentityServer4.Quickstart.UI
         }
         #endregion
 
-
-        #region 03，退出页面+async Task<IActionResult> Logout(string logoutId)
+        #region 03，Identity Server 4 退出页面+async Task<IActionResult> Logout(string logoutId)
         /// <summary>
         /// Show logout page
         /// </summary>
@@ -231,7 +232,7 @@ namespace IdentityServer4.Quickstart.UI
         }
         #endregion
 
-        #region 04，点击退出操作+async Task<IActionResult> Logout(LogoutInputModel model)
+        #region 04，Identity Server 4 点击退出操作+async Task<IActionResult> Logout(LogoutInputModel model)
         /// <summary>
         /// Handle logout page postback
         /// </summary>
@@ -270,7 +271,7 @@ namespace IdentityServer4.Quickstart.UI
         }
         #endregion
 
-
+        #region 05，Identity Server 4 用户管理首页+IActionResult Users(string returnUrl = null)
         [HttpGet]
         [Route("Account/Users")]
         [Authorize]
@@ -281,22 +282,96 @@ namespace IdentityServer4.Quickstart.UI
 
             return View(users);
         }
+        #endregion
+
+        #region 06，Identity Server 4 用户注册页面+IActionResult Register(string returnUrl = null)
+        [HttpGet]
+        [Route("Account/Register")]
+        public IActionResult Register(string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            return View();
+        }
+        #endregion
+
+        #region 07，Identity Server 4 用户注册操作+async Task<IActionResult> Register(RegisterViewModel model, string returnUrl = null, string roleName = "AdminTest")
+        [HttpPost]
+        [Route("Account/Register")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Register(RegisterViewModel model, string returnUrl = null, string roleName = "AdminTest")
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            IdentityResult result = new IdentityResult();
+
+            if (ModelState.IsValid)
+            {
+                var userItem = _userManager.FindByNameAsync(model.LoginName).Result;
+
+                if (userItem == null)
+                {
+
+                    var user = new ApplicationUser
+                    {
+                        Email = model.Email,
+                        UserName = model.LoginName,
+                        LoginName = model.RealName,
+                        Sex = model.Sex,
+                        Age = model.Birth.Year - DateTime.Now.Year,
+                        Birthday = model.Birth,
+                        Address = "",
+                        IsDelete = false
+                    };
+
+
+                    result = await _userManager.CreateAsync(user, model.Password);
+
+                    if (result.Succeeded)
+                    {
+                        result = await _userManager.AddClaimsAsync(user, new Claim[]{
+                            new Claim(JwtClaimTypes.Name, model.RealName),
+                            new Claim(JwtClaimTypes.Email, model.Email),
+                            new Claim(JwtClaimTypes.EmailVerified, "false", ClaimValueTypes.Boolean),
+                            new Claim(JwtClaimTypes.Role, roleName)
+                        });
+
+                        if (result.Succeeded)
+                        {
+                            // 可以直接登录
+                            //await _signInManager.SignInAsync(user, isPersistent: false);
+
+                            if (Url.IsLocalUrl(returnUrl))
+                            {
+                                return Redirect(returnUrl);
+                            }
+                            else
+                            {
+                                return RedirectToAction(nameof(HomeController.Index), "Home");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, $"{userItem?.UserName} already exists");
+
+                }
+
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(string.Empty, error.Description);
+                }
+            }
+
+            // If we got this far, something failed, redisplay form
+            return View(model);
+        } 
+        #endregion
 
         [HttpGet]
         public IActionResult AccessDenied()
         {
             return View();
         }
-
-
-        private void AddErrors(IdentityResult result)
-        {
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
-        }
-
 
         /*****************************************/
         /* helper APIs for the AccountController */
