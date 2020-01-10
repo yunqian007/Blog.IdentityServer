@@ -364,8 +364,116 @@ namespace IdentityServer4.Quickstart.UI
 
             // If we got this far, something failed, redisplay form
             return View(model);
-        } 
+        }
         #endregion
+
+        #region 08，Identity Server 4 edit user page+async Task<IActionResult> Edit(string id, string returnUrl = null)
+        /// <summary>
+        /// 编辑用户页面
+        /// </summary>
+        /// <param name="id">userId</param>
+        /// <param name="returnUrl">return url address</param>
+        /// <returns></returns>
+        [HttpGet("{id}")]
+        [Route("Account/EditUser/{id}")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> Edit(string id, string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _userManager.FindByIdAsync(id);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return View(new EditUserViewModel(user.Id.ToString(), user.LoginName, user.UserName, user.Email));
+        }
+        #endregion
+
+        #region 09，Identity Server 4 edit user operation+async Task<IActionResult> Edit(EditUserViewModel model, string id, string returnUrl = null)
+        /// <summary>
+        /// edit user operation 
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="id"></param>
+        /// <param name="returnUrl"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [Route("Account/Edit/{id}")]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> Edit(EditUserViewModel model, string id, string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            IdentityResult result = new IdentityResult();
+
+            if (ModelState.IsValid)
+            {
+                var userItem = _userManager.FindByIdAsync(model.Id).Result;
+
+                if (userItem != null)
+                {
+                    userItem.UserName = model.LoginName;
+                    userItem.LoginName = model.UserName;
+                    userItem.Email = model.Email;
+                    userItem.RealName = model.UserName;
+
+
+                    result = await _userManager.UpdateAsync(userItem);
+
+                    if (result.Succeeded)
+                    {
+                        return RedirectToLocal(returnUrl);
+                    }
+
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, $"{userItem?.UserName} no exist!");
+                }
+
+                AddErrors(result);
+            }
+
+            // If we got this far, something failed, redisplay form
+            return View(model);
+        }
+        #endregion
+
+        /// <summary>
+        /// 添加异常信息
+        /// </summary>
+        /// <param name="result"></param>
+        private void AddErrors(IdentityResult result)
+        {
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+        }
+
+        /// <summary>
+        /// 跳转
+        /// </summary>
+        /// <param name="returnUrl"></param>
+        /// <returns></returns>
+        private IActionResult RedirectToLocal(string returnUrl)
+        {
+            if (Url.IsLocalUrl(returnUrl))
+            {
+                return Redirect(returnUrl);
+            }
+            else
+            {
+                return RedirectToAction(nameof(HomeController.Index), "Home");
+            }
+        }
 
         [HttpGet]
         public IActionResult AccessDenied()

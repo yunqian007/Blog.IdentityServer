@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Idp= IdentityServer4.Configuration;
 
 namespace Blog.IdentityServer4
 {
@@ -42,6 +43,10 @@ namespace Blog.IdentityServer4
             services.AddIdentity<ApplicationUser, ApplicationRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
+            //services.ConfigureApplicationCookie(options =>
+            //{
+            //    options.LoginPath = new PathString("/oauth2/authorize");
+            //});
 
             services.AddMvc();
 
@@ -80,6 +85,12 @@ namespace Blog.IdentityServer4
                 options.Events.RaiseInformationEvents = true;
                 options.Events.RaiseFailureEvents = true;
                 options.Events.RaiseSuccessEvents = true;
+                //options.IssuerUri = "https://ids.neters.club";
+                //options.PublicOrigin = "https://ids.neters.club";
+                //options.UserInteraction = new Idp.UserInteractionOptions
+                //{
+                //    LoginUrl = "/oauth2/authorize",//µÇÂ¼µØÖ·  
+                //};
             })
 
                 // in-Sqlite
