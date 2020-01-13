@@ -63,7 +63,7 @@ namespace Blog.IdentityServer4
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder
-                    .UseUrls("http://localhost:9003")
+                    .UseUrls("http://*:7005")
                     .UseStartup<Startup>();
                 });
     }

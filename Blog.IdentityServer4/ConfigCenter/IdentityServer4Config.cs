@@ -47,9 +47,9 @@ namespace Blog.IdentityServer4.ConfigCenter
                     AllowedGrantTypes = GrantTypes.Implicit,
                     AllowAccessTokensViaBrowser = true,
 
-                    RedirectUris =           { "http://vueblog.neters.club/callback" },
-                    PostLogoutRedirectUris = { "http://vueblog.neters.club" },
-                    AllowedCorsOrigins =     { "http://vueblog.neters.club" },
+                    RedirectUris =           { "http://localhost:7002/callback" },
+                    PostLogoutRedirectUris = { "http://localhost:7002" },
+                    AllowedCorsOrigins =     { "http://localhost:7002" },
 
                     AllowedScopes = {
                         IdentityServerConstants.StandardScopes.OpenId,
@@ -64,9 +64,9 @@ namespace Blog.IdentityServer4.ConfigCenter
                     AllowedGrantTypes = GrantTypes.Implicit,
                     AllowAccessTokensViaBrowser = true,
 
-                    RedirectUris =           { "http://vueadmin.neters.club/callback" },
-                    PostLogoutRedirectUris = { "http://vueadmin.neters.club" },
-                    AllowedCorsOrigins =     { "http://vueadmin.neters.club" },
+                    RedirectUris =           { "http://localhost:7003/callback" },
+                    PostLogoutRedirectUris = { "http://localhost:7003" },
+                    AllowedCorsOrigins =     { "http://localhost:7003" },
 
                     AllowedScopes = {
                         IdentityServerConstants.StandardScopes.OpenId,
