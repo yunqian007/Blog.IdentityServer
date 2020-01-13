@@ -1,0 +1,32 @@
+﻿@model Blog.IdentityServer4.Views.Account.RoleEditViewModel
+
+@{
+    ViewData["Title"] = "RoleEdit";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<div class="row">
+    <div class="col-md-6">
+        <partial name="_ValidationSummary" />
+        <form asp-route-returnUrl="@ViewData["ReturnUrl"]" asp-action="Edit" method="post">
+            <h4>Create a new account.</h4>
+            <hr />
+            <input type="hidden" asp-for="Id" />
+            <div class="form-group">
+                <label asp-for="RoleName"></label>
+                <input asp-for="RoleName" class="form-control" />
+                <span asp-validation-for="RoleName" class="text-danger"></span>
+            </div>
+
+
+            <button type="submit" class="btn btn-default">Update</button>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="">Back to List</a>
+</div>
+

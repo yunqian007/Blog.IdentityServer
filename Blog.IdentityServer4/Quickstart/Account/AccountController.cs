@@ -4,6 +4,7 @@
 
 using Blog.IdentityServer4.Model;
 using Blog.IdentityServer4.Quickstart.Account;
+using Blog.IdentityServer4.Views.Account;
 using IdentityModel;
 using IdentityServer4.Events;
 using IdentityServer4.Extensions;
@@ -406,7 +407,7 @@ namespace IdentityServer4.Quickstart.UI
         /// <returns></returns>
         [HttpPost]
         [Route("Account/Edit/{id}")]
-        [ValidateAntiForgeryToken]
+        [ValidateAntiForgeryToken]//防止CSRF（跨网站请求伪造）
         [Authorize(Roles = "SuperAdmin")]
         public async Task<IActionResult> Edit(EditUserViewModel model, string id, string returnUrl = null)
         {
@@ -444,6 +445,121 @@ namespace IdentityServer4.Quickstart.UI
             // If we got this far, something failed, redisplay form
             return View(model);
         }
+        #endregion
+
+        #region 10，Identity Server 4 role register page+IActionResult RoleRegister(string returnUrl = null)
+        [HttpGet]
+        [Route("account/Roleregister")]
+        public IActionResult RoleRegister(string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            return View();
+        }
+        #endregion
+
+        #region 11，Identity Server 4 role register Operation +async Task<IActionResult> RoleRegister(RoleRegisterViewModel model, string returnUrl = null)
+        /// <summary>
+        /// Role Register Operation +async Task<IActionResult> RoleRegister(RoleRegisterViewModel model, string returnUrl = null)
+        /// </summary>
+        /// <param name="model"></param>
+        /// <param name="returnUrl"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [Route("account/RoleRegister")]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> RoleRegister(RoleRegisterViewModel model, string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            IdentityResult result = new IdentityResult();
+
+            if (ModelState.IsValid)
+            {
+                var roleItem = _roleManager.FindByNameAsync(model.RoleName).Result;
+
+                if (roleItem == null)
+                {
+
+                    var role = new ApplicationRole
+                    {
+                        Name = model.RoleName
+                    };
+
+
+                    result = await _roleManager.CreateAsync(role);
+
+                    if (result.Succeeded)
+                    {
+
+                        if (result.Succeeded)
+                        {
+                            // 可以直接登录
+                            //await _signInManager.SignInAsync(user, isPersistent: false);
+
+                            return RedirectToLocal(returnUrl);
+                        }
+                    }
+
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, $"{roleItem?.Name} already exists");
+
+                }
+
+                AddErrors(result);
+            }
+
+            // If we got this far, something failed, redisplay form
+            return View(model);
+        }
+        #endregion
+
+        #region 12，Identity Server 4 roles manager page+IActionResult Roles(string returnUrl = null)
+        /// <summary>
+        /// roles manager page
+        /// </summary>
+        /// <param name="returnUrl"></param>
+        /// <returns></returns>
+        [HttpGet]
+        [Route("account/Roles")]
+        [Authorize(Roles = "SuperAdmin")]
+        public IActionResult Roles(string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            var roles = _roleManager.Roles.Where(d => !d.IsDeleted).ToList();
+
+            return View(roles);
+        }
+        #endregion
+
+        #region 13，edit role page+async Task<IActionResult> RoleEdit(string id, string returnUrl = null)
+        /// <summary>
+        /// edit role page
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="returnUrl"></param>
+        /// <returns></returns>
+        [HttpGet("{id}")]
+        [Route("account/RoleEdit/{id}")]
+        [Authorize(Roles = "SuperAdmin")]
+        public async Task<IActionResult> RoleEdit(string id, string returnUrl = null)
+        {
+            ViewData["ReturnUrl"] = returnUrl;
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var user = await _roleManager.FindByIdAsync(id);
+
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            return View(new RoleEditViewModel(user.Id.ToString(), user.Name));
+        } 
         #endregion
 
         /// <summary>

@@ -50,8 +50,6 @@ namespace Blog.IdentityServer4
 
             services.AddMvc();
 
-            //services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-
             #region ²âÊÔIdentityServer4
             //var builder = services.AddIdentityServer(options =>
             //    {

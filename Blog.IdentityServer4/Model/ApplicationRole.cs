@@ -41,10 +41,19 @@ namespace Blog.IdentityServer4.Model
         /// </summary>
         public DateTime? ModifyTime { get; set; } = DateTime.Now;
 
+        /// <summary>
+        /// 是否删除
+        /// </summary>
         public bool IsDeleted { get; set; }
 
+        /// <summary>
+        /// 描述
+        /// </summary>
         public string Description { get; set; }
 
+        /// <summary>
+        /// 用户角色关系表
+        /// </summary>
         public ICollection<ApplicationUserRole> UserRoles { get; set; }
     }
 }
